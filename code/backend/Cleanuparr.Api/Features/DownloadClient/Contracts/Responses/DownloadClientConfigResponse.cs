@@ -6,6 +6,8 @@ namespace Cleanuparr.Api.Features.DownloadClient.Contracts.Responses;
 
 public sealed record DownloadClientConfigResponse
 {
+    public UsenetOptions UsenetOptions { get; init; } = new();
+
     public Guid Id { get; init; }
 
     public bool Enabled { get; init; }
@@ -36,6 +38,7 @@ public sealed record DownloadClientConfigResponse
 
     public static DownloadClientConfigResponse From(DownloadClientConfig config) => new()
     {
+        UsenetOptions = config.UsenetOptions,
         Id = config.Id,
         Enabled = config.Enabled,
         Name = config.Name,

@@ -41,6 +41,9 @@ public class UnlinkedConfigController : ControllerBase
                 return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {downloadClientId} not found");
             }
 
+            if (client.Type == Cleanuparr.Domain.Enums.DownloadClientType.Usenet)
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Torrent cleanup options are unavailable for Usenet clients");
+
             var config = await _dataContext.UnlinkedConfigs
                 .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.DownloadClientConfigId == downloadClientId);
@@ -67,6 +70,9 @@ public class UnlinkedConfigController : ControllerBase
             {
                 return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {downloadClientId} not found");
             }
+
+            if (client.Type == Cleanuparr.Domain.Enums.DownloadClientType.Usenet)
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Torrent cleanup options are unavailable for Usenet clients");
 
             var existing = await _dataContext.UnlinkedConfigs
                 .FirstOrDefaultAsync(u => u.DownloadClientConfigId == downloadClientId);

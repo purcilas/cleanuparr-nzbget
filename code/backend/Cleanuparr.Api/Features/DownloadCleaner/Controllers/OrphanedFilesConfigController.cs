@@ -40,6 +40,9 @@ public sealed class OrphanedFilesConfigController : ControllerBase
                 return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {downloadClientId} not found");
             }
 
+            if (client.Type == Cleanuparr.Domain.Enums.DownloadClientType.Usenet)
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Torrent cleanup options are unavailable for Usenet clients");
+
             var existing = await _dataContext.OrphanedFilesConfigs
                 .FirstOrDefaultAsync(c => c.DownloadClientConfigId == downloadClientId);
 

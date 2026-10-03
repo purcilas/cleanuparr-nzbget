@@ -36,10 +36,25 @@
           <span class="item-row__detail">{{ client.host }}</span>
         </div>
         <div class="item-row__actions">
+          @if (client.typeName === 'NZBGet') {
+            <app-button variant="ghost" size="sm" (clicked)="loadUsenetStatus(client.id)">Observations</app-button>
+          }
           <app-button variant="ghost" size="sm" (clicked)="openEditModal(client)">Edit</app-button>
           <app-button variant="destructive" size="sm" (clicked)="deleteClient(client)">Delete</app-button>
         </div>
       </div>
+      @if (statuses()[client.id]; as observations) {
+        <div aria-live="polite">
+          @for (observation of observations; track observation.id) {
+            <p>{{ observation.title || observation.id }}: {{ observation.incident }} · {{ observation.samples }} observations
+              @if (observation.actionState) { · {{ observation.actionState }} }
+            </p>
+            @if (observation.actionState === 'Halted') {
+              <app-button variant="secondary" size="sm" [loading]="reviewingId() === client.id" (clicked)="reviewUsenetRecovery(client.id)">Review recovery hold</app-button>
+            }
+          } @empty { <p>No observations yet. Enable Queue Cleaner to begin monitoring.</p> }
+        </div>
+      }
     } @empty {
       <app-empty-state
         heading="No download clients"
@@ -87,12 +102,32 @@
     <app-input label="External URL" placeholder="https://qbit.example.com" type="url" [formField]="clientForm.externalUrl"
       hint="Optional URL used in notifications for clickable links (e.g., when internal Docker URLs are not reachable externally)"
       helpKey="download-client:externalUrl" />
+    @if (!isUsenet()) {
     <app-input label="Download Directory Source" placeholder="/downloads" [formField]="clientForm.downloadDirectorySource"
       hint="The path your download client reports (e.g. /downloads). Leave blank if Cleanuparr sees the files at the same path."
       helpKey="download-client:downloadDirectorySource" />
     <app-input label="Download Directory Target" placeholder="/mnt/data/downloads" [formField]="clientForm.downloadDirectoryTarget"
       hint="Where Cleanuparr actually finds those files (e.g. /mnt/data/downloads). Cleanuparr replaces the source path with this one."
       helpKey="download-client:downloadDirectoryTarget" />
+    }
+    @if (isUsenet()) {
+      <h3>Usenet queue rules</h3>
+      <p>Observation mode records stalls without deleting or searching. Waiting jobs, pauses, disk constraints and unknown states are protected. Repair and unpack stalls are observation-only.</p>
+      <app-number-input label="Transfer stall (minutes)" [formField]="clientForm.stallMinutes" [error]="clientForm.stallMinutes().errors()[0]?.message" />
+      <app-number-input label="Processing observation threshold (minutes)" [formField]="clientForm.processingStallMinutes" [error]="clientForm.processingStallMinutes().errors()[0]?.message" />
+      <app-number-input label="Minimum observations" [formField]="clientForm.requiredObservations" [error]="clientForm.requiredObservations().errors()[0]?.message" />
+      <app-number-input label="Maximum polling gap (minutes)" [formField]="clientForm.maxObservationGapMinutes" [error]="clientForm.maxObservationGapMinutes().errors()[0]?.message" />
+      <app-number-input label="Maximum recoveries per run" [formField]="clientForm.maxActionsPerRun" [error]="clientForm.maxActionsPerRun().errors()[0]?.message" />
+      <app-number-input label="Maximum recoveries per hour" [formField]="clientForm.maxActionsPerHour" [error]="clientForm.maxActionsPerHour().errors()[0]?.message" />
+      <app-number-input label="Recovery cooldown (minutes)" [formField]="clientForm.replacementCooldownMinutes" [error]="clientForm.replacementCooldownMinutes().errors()[0]?.message" />
+      <app-number-input label="Wait for renewed progress (minutes)" [formField]="clientForm.recoveryTimeoutMinutes" [error]="clientForm.recoveryTimeoutMinutes().errors()[0]?.message" />
+      <app-number-input label="Minimum free disk space (MiB)" [formField]="clientForm.minimumFreeDiskMiB" [error]="clientForm.minimumFreeDiskMiB().errors()[0]?.message" />
+      <app-toggle label="Live validation completed" [formField]="clientForm.liveValidationConfirmed"
+        hint="Confirm only after comparing read-only and dry-run observations with your real stalls." />
+      @if (clientForm.liveCleanupEnabled().errors()[0]; as error) { <p role="alert">{{ error.message }}</p> }
+      <app-toggle label="Enable live Usenet recovery" [formField]="clientForm.liveCleanupEnabled"
+        hint="Allows arr removal, blocklisting and replacement search for verified bad releases and completed failed imports. Global dry-run still takes precedence." />
+    }
   </div>
   <div modal-footer>
     <app-button variant="secondary" size="sm" [loading]="testing()" (clicked)="testConnection()">

@@ -93,8 +93,31 @@ public sealed record DownloadClientConfig
     /// <summary>
     /// Validates the configuration
     /// </summary>
+    [JsonIgnore]
+    public string? UsenetOptionsJson { get; set; }
+
+    [NotMapped]
+    public UsenetOptions UsenetOptions
+    {
+        get => string.IsNullOrEmpty(UsenetOptionsJson) ? new() : System.Text.Json.JsonSerializer.Deserialize<UsenetOptions>(UsenetOptionsJson)!;
+        set => UsenetOptionsJson = System.Text.Json.JsonSerializer.Serialize(value);
+    }
+
     public void Validate()
     {
+        if (TypeName == DownloadClientTypeName.NZBGet)
+        {
+            if (Type != DownloadClientType.Usenet) throw new ValidationException("NZBGet requires the Usenet protocol");
+            if (Host is null || !Host.IsAbsoluteUri || (Host.Scheme != "http" && Host.Scheme != "https") || !string.IsNullOrEmpty(Host.UserInfo) || !string.IsNullOrEmpty(Host.Query) || !string.IsNullOrEmpty(Host.Fragment))
+                throw new ValidationException("NZBGet requires an absolute HTTP(S) host without embedded credentials");
+            if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
+                throw new ValidationException("NZBGet requires RPC username and password");
+            if (UrlBase?.Contains("..") == true || UrlBase?.Contains('?') == true || UrlBase?.Contains('#') == true)
+                throw new ValidationException("NZBGet URL base must be a path");
+            UsenetOptions.Validate();
+        }
+        else if (Type == DownloadClientType.Usenet) throw new ValidationException("Only NZBGet is supported for Usenet");
+
         if (string.IsNullOrWhiteSpace(Name))
         {
             throw new ValidationException($"Client name cannot be empty");

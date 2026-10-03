@@ -1,3 +1,4 @@
+import { DEFAULT_USENET_OPTIONS } from '@shared/models/download-client-config.model';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { ApiError } from '@core/interceptors/error.interceptor';
@@ -45,6 +46,7 @@ function createApi(config: DownloadClientConfig = CONFIG) {
     update: vi.fn(() => of(QBIT)),
     delete: vi.fn(() => of(undefined)),
     test: vi.fn(() => of({ message: 'Connected to qBittorrent 4.6.0' })),
+    usenetStatus: vi.fn(() => of([{ id: 'nzb:7', ownerId: 'owner', lastSeenTicks: 1, samples: 3, incident: 'Observing', actionState: '' }])),
   };
 }
 
@@ -152,6 +154,7 @@ describe('DownloadClientsComponent', () => {
 
     expect(component.editingClient()).toBeNull();
     expect(component.clientModel()).toEqual({
+      ...DEFAULT_USENET_OPTIONS,
       enabled: true,
       name: '',
       typeName: DownloadClientTypeName.qBittorrent,
@@ -259,6 +262,7 @@ describe('DownloadClientsComponent', () => {
 
     expect(component.editingClient()).toBe(DELUGE);
     expect(component.clientModel()).toEqual({
+      ...DEFAULT_USENET_OPTIONS,
       enabled: false,
       name: 'Deluge box',
       typeName: DownloadClientTypeName.Deluge,
@@ -491,4 +495,29 @@ describe('DownloadClientsComponent', () => {
     expect(toast.error).toHaveBeenCalledWith('Client in use');
     expect(component.clients()).toEqual([QBIT, DELUGE]);
   });
+  it('configures and tests NZBGet with Usenet protocol and observation defaults', () => {
+    const { component, fixture, api } = setup();
+    component.openAddModal(); fixture.detectChanges();
+    chooseClientType(fixture, 'NZBGet (Usenet)');
+    component.clientModel.update(m => ({ ...m, name: 'nzb', host: 'http://localhost:6789', username: 'rpc', password: 'secret' }));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Usenet queue rules');
+    expect(fieldLabels(fixture)).not.toContain('Download Directory Source');
+    component.testConnection();
+    expect(api.test).toHaveBeenCalledWith(expect.objectContaining({ type: DownloadClientType.Usenet, typeName: DownloadClientTypeName.NZBGet }));
+    component.saveClient();
+    expect(api.create).toHaveBeenCalledWith(expect.objectContaining({ type: DownloadClientType.Usenet, usenetOptions: DEFAULT_USENET_OPTIONS }));
+  });
+
+  it('requires validation before enabling live recovery and displays observations', () => {
+    const { component, fixture, api } = setup();
+    component.openAddModal();
+    component.clientModel.update(m => ({ ...m, typeName: DownloadClientTypeName.NZBGet, name: 'nzb', host: 'http://localhost:6789', liveCleanupEnabled: true }));
+    fixture.detectChanges();
+    expect(component.hasModalErrors()).toBe(true);
+    component.saveClient(); expect(api.create).not.toHaveBeenCalled();
+    component.loadUsenetStatus('nzb');
+    expect(component.statuses()['nzb'][0].incident).toBe('Observing');
+  });
+
 });

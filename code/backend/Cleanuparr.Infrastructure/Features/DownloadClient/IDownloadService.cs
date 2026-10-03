@@ -9,6 +9,10 @@ public interface IDownloadService : IDisposable
 {
     DownloadClientConfig ClientConfig { get; }
 
+    Usenet.DownloadCapabilities Capabilities => ClientConfig.Type == Cleanuparr.Domain.Enums.DownloadClientType.Usenet
+        ? Usenet.DownloadCapabilities.UsenetQueue
+        : Usenet.DownloadCapabilities.TorrentQueue | Usenet.DownloadCapabilities.Seeding | Usenet.DownloadCapabilities.FileBlocking;
+
     public Task LoginAsync();
 
     /// <summary>

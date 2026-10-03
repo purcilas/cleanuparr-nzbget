@@ -121,6 +121,7 @@ public class DownloadClientResponseContractTests : IDisposable
         "type",
         "typeName",
         "urlBase",
+        "usenetOptions",
         "username",
     ];
 

@@ -1,4 +1,4 @@
-﻿using Cleanuparr.Api.Features.Auth;
+using Cleanuparr.Api.Features.Auth;
 using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Infrastructure.Features.LazyLibrarian;
 using Cleanuparr.Infrastructure.Events;
@@ -57,6 +57,7 @@ public static class ServicesDI
             .AddKeyedScoped<ILazyLibrarianEvaluator, LazyLibrarianServiceQC>(ILazyLibrarianEvaluator.QueueCleanerKey)
             .AddKeyedScoped<ILazyLibrarianEvaluator, LazyLibrarianServiceCB>(ILazyLibrarianEvaluator.MalwareBlockerKey)
             .AddScoped<IArrClientFactory, ArrClientFactory>()
+            .AddScoped<Cleanuparr.Infrastructure.Features.DownloadClient.Usenet.UsenetQueueCoordinator>()
             .AddScoped<QueueCleaner>()
             .AddScoped<BlacklistSynchronizer>()
             .AddScoped<MalwareBlocker>()

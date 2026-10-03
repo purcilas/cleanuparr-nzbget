@@ -45,6 +45,7 @@ public sealed class DownloadCleanerConfigController : ControllerBase
                 .FirstAsync();
 
             var downloadClients = await _dataContext.DownloadClients
+                .Where(c => c.Type == Cleanuparr.Domain.Enums.DownloadClientType.Torrent)
                 .AsNoTracking()
                 .ToListAsync();
 

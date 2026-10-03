@@ -185,6 +185,18 @@ public class ArrClientTests
         request.Headers.GetValues("x-api-key").ShouldHaveSingleItem().ShouldBe("secret-key");
     }
 
+    [Theory]
+    [InlineData("usenet", true)]
+    [InlineData("torrent", false)]
+    public async Task DeleteQueueItemAsync_UsenetDisablesMutationRetry_WithoutChangingTorrentRequests(string protocol, bool expected)
+    {
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
+        await _client.DeleteQueueItemAsync(_arrInstance, BuildRecord(7) with { Protocol = protocol }, true, false, DeleteReason.Stalled);
+        var request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        bool disabled = request.Options.TryGetValue(new HttpRequestOptionsKey<bool>("Cleanuparr.NoMutationRetry"), out bool value) && value;
+        disabled.ShouldBe(expected);
+    }
+
     [Fact]
     public async Task DeleteQueueItemAsync_ChangeCategory_BuildsCategoryQuery()
     {

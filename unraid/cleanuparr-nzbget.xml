@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>cleanuparr-nzbget</Name>
+  <Repository>ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03</Repository>
+  <Network>bridge</Network>
+  <Privileged>false</Privileged>
+  <Overview>Local Cleanuparr build with native NZBGet support. Start in observation mode. No media mounts required for API-only monitoring.</Overview>
+  <WebUI>http://[IP]:[PORT:11011]/</WebUI>
+  <Config Name="Web UI" Target="11011" Default="11012" Mode="tcp" Description="Separate host port for initial testing" Type="Port" Display="always" Required="true" Mask="false">11012</Config>
+  <Config Name="Appdata" Target="/config" Default="/mnt/user/appdata/cleanuparr-nzbget" Mode="rw" Description="Separate persistent configuration; do not share with another running instance" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/cleanuparr-nzbget</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="Unraid nobody UID" Type="Variable" Display="always" Required="true" Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Unraid users GID" Type="Variable" Display="always" Required="true" Mask="false">100</Config>
+  <Config Name="TZ" Target="TZ" Default="America/New_York" Mode="" Description="Timezone" Type="Variable" Display="always" Required="true" Mask="false">America/New_York</Config>
+</Container>

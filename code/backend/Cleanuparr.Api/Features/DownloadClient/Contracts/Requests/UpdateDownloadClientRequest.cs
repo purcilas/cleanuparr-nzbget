@@ -9,6 +9,8 @@ namespace Cleanuparr.Api.Features.DownloadClient.Contracts.Requests;
 
 public sealed record UpdateDownloadClientRequest
 {
+    public UsenetOptions? UsenetOptions { get; init; }
+
     public bool Enabled { get; init; }
 
     public string Name { get; init; } = string.Empty;
@@ -56,6 +58,7 @@ public sealed record UpdateDownloadClientRequest
 
     public DownloadClientConfig ApplyTo(DownloadClientConfig existing) => existing with
     {
+        UsenetOptions = UsenetOptions ?? existing.UsenetOptions,
         Enabled = Enabled,
         Name = Name,
         TypeName = TypeName,

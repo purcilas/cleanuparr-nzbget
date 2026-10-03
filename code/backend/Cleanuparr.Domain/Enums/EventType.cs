@@ -1,4 +1,4 @@
-﻿namespace Cleanuparr.Domain.Enums;
+namespace Cleanuparr.Domain.Enums;
 
 public enum EventType
 {
@@ -16,6 +16,7 @@ public enum EventType
     StrikeReset,
     ForceImported,
     DownloadStopped,
+    UsenetIncident,
 
     /// <summary>
     /// Text this build does not know.

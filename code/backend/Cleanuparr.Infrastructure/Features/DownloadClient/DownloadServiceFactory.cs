@@ -41,6 +41,7 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
 
         return downloadClientConfig.TypeName switch
         {
+            DownloadClientTypeName.NZBGet => ActivatorUtilities.CreateInstance<Usenet.NzbGetService>(_serviceProvider, downloadClientConfig),
             DownloadClientTypeName.qBittorrent => ActivatorUtilities.CreateInstance<QBitService>(_serviceProvider, downloadClientConfig),
             DownloadClientTypeName.Deluge => ActivatorUtilities.CreateInstance<DelugeService>(_serviceProvider, downloadClientConfig),
             DownloadClientTypeName.Transmission => ActivatorUtilities.CreateInstance<TransmissionService>(_serviceProvider, downloadClientConfig),

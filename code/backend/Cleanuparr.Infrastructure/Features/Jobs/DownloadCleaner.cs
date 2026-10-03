@@ -1,4 +1,4 @@
-﻿using Cleanuparr.Domain.Entities;
+using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
@@ -11,6 +11,7 @@ using Cleanuparr.Infrastructure.Features.DownloadCleaner.Services;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration.General;
@@ -64,7 +65,7 @@ public sealed class DownloadCleaner : GenericHandler
 
     protected override async Task ExecuteInternalAsync(CancellationToken cancellationToken = default)
     {
-        IReadOnlyList<IDownloadService> downloadServices = await GetInitializedDownloadServicesAsync();
+        IReadOnlyList<IDownloadService> downloadServices = await GetInitializedDownloadServicesAsync(DownloadClientType.Torrent);
 
         if (downloadServices.Count is 0)
         {
@@ -104,6 +105,8 @@ public sealed class DownloadCleaner : GenericHandler
 
         foreach (IDownloadService downloadService in downloadServices)
         {
+            if (downloadService.ClientConfig.Type != DownloadClientType.Torrent) continue;
+
             using IDisposable _ = LogContext.PushProperty(LogProperties.DownloadClientType, downloadService.ClientConfig.Type.ToString());
             using IDisposable _2 = LogContext.PushProperty(LogProperties.DownloadClientName, downloadService.ClientConfig.Name);
 
@@ -190,7 +193,10 @@ public sealed class DownloadCleaner : GenericHandler
 
         try
         {
-            await _orphanedFilesService.ProcessAsync(loggedInServices, cancellationToken);
+            if (ContextProvider.Get<List<DownloadClientConfig>>(nameof(DownloadClientConfig)).Any(x => x.Enabled && x.Type == DownloadClientType.Usenet))
+                _logger.LogInformation("Orphan cleanup suspended: Usenet paths are not yet supported");
+            else
+                await _orphanedFilesService.ProcessAsync(loggedInServices, cancellationToken);
         }
         catch (Exception ex)
         {

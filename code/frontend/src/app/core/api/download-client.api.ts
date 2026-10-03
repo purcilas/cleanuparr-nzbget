@@ -6,7 +6,7 @@ import {
   ClientConfig,
   CreateDownloadClientDto,
   TestDownloadClientRequest,
-  TestConnectionResult,
+  TestConnectionResult, UsenetStatus,
 } from '@shared/models/download-client-config.model';
 
 @Injectable({ providedIn: 'root' })
@@ -27,6 +27,14 @@ export class DownloadClientApi {
 
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`/api/configuration/download_client/${id}`);
+  }
+
+  usenetStatus(id: string): Observable<UsenetStatus[]> {
+    return this.http.get<UsenetStatus[]>(`/api/configuration/download_client/${id}/usenet-status`);
+  }
+
+  reviewUsenetRecovery(id: string): Observable<{message: string}> {
+    return this.http.post<{message: string}>(`/api/configuration/download_client/${id}/usenet-review`, {acknowledgeReview: true});
   }
 
   test(request: TestDownloadClientRequest): Observable<TestConnectionResult> {

@@ -288,6 +288,8 @@ public abstract class ArrClient : IArrClient
         try
         {
             using HttpRequestMessage request = new(HttpMethod.Delete, uriBuilder.Uri);
+            if (record.Protocol.Equals("usenet", StringComparison.OrdinalIgnoreCase))
+                request.Options.Set(new HttpRequestOptionsKey<bool>("Cleanuparr.NoMutationRetry"), true);
             SetApiKey(request, arrInstance.ApiKey);
 
             HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));

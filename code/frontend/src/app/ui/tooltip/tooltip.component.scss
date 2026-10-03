@@ -6,6 +6,7 @@
 }
 
 .tooltip-bubble {
+  display: none;
   position: absolute;
   padding: var(--space-2) var(--space-3);
   background: var(--surface-overlay, rgba(30, 20, 50, 0.95));
@@ -25,6 +26,7 @@
   box-shadow: var(--shadow-tooltip);
 
   &--visible {
+    display: block;
     opacity: 1;
     visibility: visible;
   }

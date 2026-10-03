@@ -1,4 +1,4 @@
-﻿namespace Cleanuparr.Domain.Enums;
+namespace Cleanuparr.Domain.Enums;
 
 public enum DownloadClientTypeName
 {
@@ -7,6 +7,7 @@ public enum DownloadClientTypeName
     Transmission,
     uTorrent,
     rTorrent,
+    NZBGet = 5,
 
     /// <summary>
     /// Text this build does not know.

@@ -22,6 +22,7 @@ export function eventTypeSeverity(eventType: string): BadgeSeverity {
       return 'error';
     case EventType.StalledStrike:
     case EventType.DownloadMarkedForDeletion:
+    case EventType.UsenetIncident:
       return 'warning';
     case EventType.DownloadStopped:
     case EventType.DownloadingMetadataStrike:

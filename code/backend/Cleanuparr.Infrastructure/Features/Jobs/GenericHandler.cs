@@ -382,12 +382,12 @@ public abstract class GenericHandler : IHandler
     }
 
 
-    protected async Task<IReadOnlyList<IDownloadService>> GetInitializedDownloadServicesAsync()
+    protected async Task<IReadOnlyList<IDownloadService>> GetInitializedDownloadServicesAsync(DownloadClientType? protocol = null)
     {
         var downloadClientConfigs = ContextProvider.Get<List<DownloadClientConfig>>(nameof(DownloadClientConfig));
         List<IDownloadService> downloadServices = [];
 
-        foreach (var config in downloadClientConfigs)
+        foreach (var config in downloadClientConfigs.Where(x => protocol is null || x.Type == protocol))
         {
             try
             {

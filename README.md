@@ -1,134 +1,27 @@
-<div align="center">
+# Cleanuparr with native NZBGet support
 
-_Love this project? Give it a ⭐️ and let others know!_
+An independently maintained, experimental fork of Cleanuparr. NZBGet configuration, connection testing, persisted progress observations and guarded Sonarr/Radarr recovery are integrated into the existing application. SABnzbd is not implemented. Upstream does not support these changes.
 
-# <img width="24px" src="./Logo/256.png" alt="Cleanuparr"></img> Cleanuparr
+## Install on Unraid
 
-_/kliː.nʌp.ər/ — like "cleanuper", someone who does the cleanup. Not "CleanupArr" or "CleanUpArr"._
+Image: `ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03` (Linux amd64). A downloadable Docker archive is also available in the [release](https://github.com/purcilas/cleanuparr-nzbget/releases/tag/nzbget-2026.10.03). Registry visibility and anonymous-pull verification are tracked in the release notes.
 
-![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcleanuparr-status.pages.dev%2Fstatus.json&query=%24.version&logo=git&label=version&color=blue)
-![Total Downloads](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2FCleanuparr%2FCleanuparr%2Fcleanuparr&query=%24.downloadCount&style=flat&logo=docker&label=Total%20Downloads&color=blue)
-[![Tests](https://github.com/Cleanuparr/Cleanuparr/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/Cleanuparr/Cleanuparr/actions/workflows/test.yml)
+Use Docker → Add Container with this image, bridge networking, host TCP port **11012** mapped to **11011**, `/mnt/user/appdata/cleanuparr-nzbget` mapped read/write to `/config`, `PUID=99`, `PGID=100`, and your timezone in `TZ`. Privileged mode is unnecessary. Use an unused host port and a fresh appdata directory. Open `http://YOUR-UNRAID-IP:11012`.
 
+An [Unraid template](unraid/cleanuparr-nzbget.xml) and [installation guide](unraid/INSTALL.md) are included. The standard upstream image does not contain NZBGet support. Do not run two versions against the same database. Do not enable automatic updates for this validation release.
 
-[![Discord](https://img.shields.io/discord/1306721212587573389?color=7289DA&label=Discord&style=for-the-badge&logo=discord)](https://discord.gg/SCtMCgtsc4)
+Add Sonarr/Radarr and NZBGet using LAN addresses and published host ports. Use the exact download-client name already shown in Sonarr/Radarr. Enable Queue Cleaner, keep global dry-run on and leave both **Live validation completed** and **Enable live Usenet recovery** off. API-only observation needs no media filesystem mounts.
 
-</div>
+## Safety and current limitations
 
-Cleanuparr is an advanced download manager for the Servarr ecosystem. It works with Sonarr, Radarr, Lidarr, Readarr, and Whisparr alongside download clients like qBittorrent, Transmission, and Deluge. Beyond cleaning up stalled, blocked, and malicious downloads, it searches for missing content and quality upgrades, manages seeding, and removes orphaned files.
+Observation is the default. Pure no-progress and repair/unpack stalls are recorded without automatic deletion. Transfer recovery also requires damaged-download evidence; pauses, disk/provider constraints, unknown states and ambiguous ownership suspend action. Caps, cooldowns and recovery holds prevent clearing a queue repeatedly. See [native Usenet documentation](docs/native-usenet/README.md).
 
-<div align="center">
-  <img src="./docs/static/img/screenshots/dashboard.webp" alt="Cleanuparr dashboard">
-</div>
+Live homelab validation is pending. Local verification passed 3,828 backend tests (10 existing skips), 911 frontend tests, production build/lint, synthetic desktop/mobile checks, SQLite and disposable PostgreSQL migration checks, and packaged/container startup. This is a prerelease, not a claim of production acceptance.
 
-Cleanuparr was created primarily to address malicious files, such as `*.lnk` or `*.zipx`, that were getting stuck in Sonarr/Radarr and required manual intervention. Some of the reddit posts that made Cleanuparr come to life can be found [here](https://www.reddit.com/r/sonarr/comments/1gqnx16/psa_sonarr_downloaded_a_virus/), [here](https://www.reddit.com/r/sonarr/comments/1gqwklr/sonar_downloaded_a_mkv_file_which_looked_like_a/), [here](https://www.reddit.com/r/sonarr/comments/1gpw2wa/downloaded_waiting_to_import/) and [here](https://www.reddit.com/r/sonarr/comments/1gpi344/downloads_not_importing_no_files_found/).
+## Source and provenance
 
-> [!IMPORTANT]
-> **Features:**
-> - Strike system to mark bad downloads.
-> - Remove and block downloads that reached a maximum number of strikes.
-> - Remove and block downloads that are **failing to be imported** by the arrs.
-> - Remove and block downloads that are **stalled** or in **metadata downloading** state.
-> - Remove and block downloads that have a **low download speed** or **high estimated completion time**.
-> - Remove and block downloads blocked by qBittorrent or by Cleanuparr's **Malware Blocker**.
-> - Remove and block known malware based on patterns found by the community.
-> - Automatically trigger a search for downloads removed from the arrs.
-> - Proactively search for **missing** items across your Radarr and Sonarr libraries.
-> - Search for **quality upgrades** for items that haven't met their quality profile's cutoff (a.k.a. **Cutoff Unmet**).
-> - Search for **custom format score upgrades** with automatic score tracking.
-> - Clean up downloads that have been **seeding** for a certain amount of time.
-> - Remove downloads that are **orphaned**/have no **hardlinks**/are not referenced by the arrs anymore (with [cross-seed](https://www.cross-seed.org/) support).
-> - Scan configured directories for **files not claimed by any active torrent**, move them to a dedicated orphaned directory, and optionally auto-purge.
-> - Notify on strike or download removal.
-> - Ignore certain torrent hashes, categories, tags or trackers from being processed by Cleanuparr.
+Baseline: Cleanuparr `58b476c36063e116ed5c582d6ee81f90856c47ec`. Application source is on this branch. The release includes complete retained build inputs and pinned public-source torrent libraries, the upstream-relative patch and checksums. See [implementation notes](IMPLEMENTATION.md) and [build provenance](provenance/UPSTREAM.md).
 
-## Sponsored by GitAds
-[![Sponsored by GitAds](https://gitads.dev/v1/ad-serve?source=cleanuparr/cleanuparr@github)](https://gitads.dev/v1/ad-track?source=cleanuparr/cleanuparr@github)
+The image layers retain a pinned upstream OS/Apprise environment and replace the entire application with the locally validated package. The manual publisher verifies the exact Docker archive checksum before pushing; it does not rebuild or fetch unreviewed application code. No upstream release, auto-approval or deployment workflows run on this branch. Updates require a new reviewed build and release.
 
-## Screenshots
-
-https://cleanuparr.github.io/Cleanuparr/docs/screenshots
-
-## 🎯 Supported Applications
-
-### *Arr Applications (latest version)
-- **Sonarr**
-- **Radarr**
-- **Lidarr**
-- **Readarr**
-- **Whisparr v2**
-- **Whisparr v3**
-- **Sportarr**
-- **LazyLibrarian**
-
-### Download Clients (latest version)
-- **qBittorrent**
-- **Transmission**
-- **Deluge**
-- **µTorrent**
-- **rTorrent**
-
-### Platforms
-- **Docker**
-- **Windows**
-- **macOS**
-- **Linux**
-- **Unraid**
-
-## 🚀 Quick Start
-
-```bash
-docker run -d --name cleanuparr \
-  --restart unless-stopped \
-  -p 11011:11011 \
-  -v /path/to/config:/config \
-  -e PORT=11011 \
-  -e PUID=1000 \
-  -e PGID=1000 \
-  -e TZ=Etc/UTC \
-  ghcr.io/cleanuparr/cleanuparr:latest
-```
-
-For Docker Compose, health checks, and other installation methods, see the [Complete Installation Guide](https://cleanuparr.github.io/Cleanuparr/docs/installation/detailed), but not before reading the [Prerequisites](https://cleanuparr.github.io/Cleanuparr/docs/installation/).
-
-> Prefer not to self-host? A managed Cleanuparr instance is available via [ElfHosted](https://store.elfhosted.com/product-category/personal-stacks/?utm_source=github&utm_medium=readme&utm_campaign=cleanuparr-readme), bundled alongside Sonarr/Radarr to keep your queues tidy (7-day trial).
-
-### 🌐 Access the Web Interface
-
-After installation, open your browser and navigate to:
-```
-http://localhost:11011
-```
-
-**Next Steps:** Check out the [📖 Complete Documentation](https://cleanuparr.github.io/Cleanuparr/) for detailed configuration guides and setup instructions.
-
-## 📖 Documentation & Support
-
-- **📚 [Complete Documentation](https://cleanuparr.github.io/Cleanuparr/)** - Installation guides, configuration, and troubleshooting
-- **⚙️ [Configuration Guide](https://cleanuparr.github.io/Cleanuparr/docs/category/configuration)** - Set up download clients, *arr apps, and features
-- **🔧 [Setup Scenarios](https://cleanuparr.github.io/Cleanuparr/docs/category/setup-scenarios)** - Common use cases and examples
-- **💬 [Discord Community](https://discord.gg/SCtMCgtsc4)** - Get help and discuss with other users
-- **🔗 [GitHub Releases](https://github.com/Cleanuparr/Cleanuparr/releases)** - Download binaries and view changelog
-
-## 🤝 Contributing
-
-We welcome contributions from the community! Whether it's bug fixes, new features, documentation improvements, or testing, your help is appreciated.
-
-**Before contributing:** Please read our [Contributing Guide](CONTRIBUTING.md) and announce your intent to work on an issue before starting.
-
-- **[Contributing Guide](CONTRIBUTING.md)** - Learn how to set up your development environment and submit contributions
-- **[Report Issues](https://github.com/Cleanuparr/Cleanuparr/issues/new/choose)** - Found a bug? Let us know!
-- **[Feature Requests](https://github.com/Cleanuparr/Cleanuparr/issues/new/choose)** - Share your ideas for new features
-- **[Help Test Features](https://discord.gg/SCtMCgtsc4)** - Join Discord to test pre-release features and provide feedback
-
-# Credits
-Special thanks for inspiration go to:
-- [ThijmenGThN/swaparr](https://github.com/ThijmenGThN/swaparr)
-- [ManiMatter/decluttarr](https://github.com/ManiMatter/decluttarr)
-- [PaeyMoopy/sonarr-radarr-queue-cleaner](https://github.com/PaeyMoopy/sonarr-radarr-queue-cleaner)
-- [Sonarr](https://github.com/Sonarr/Sonarr) & [Radarr](https://github.com/Radarr/Radarr)
-
-# Buy me a coffee
-If I made your life just a tiny bit easier, consider buying me a coffee!
-
-<a href="https://buymeacoffee.com/flaminel" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>
+License: GNU GPL v3; upstream attribution and LICENSE are retained.

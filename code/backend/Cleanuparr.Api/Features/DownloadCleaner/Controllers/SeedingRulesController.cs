@@ -43,6 +43,9 @@ public class SeedingRulesController : ControllerBase
                 return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {downloadClientId} not found");
             }
 
+            if (client.Type == Cleanuparr.Domain.Enums.DownloadClientType.Usenet)
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Torrent cleanup options are unavailable for Usenet clients");
+
             var rules = await SeedingRuleHelper.GetForClientAsync(_dataContext, client);
 
             return Ok(rules.Select(SeedingRuleResponse.From));
@@ -67,6 +70,9 @@ public class SeedingRulesController : ControllerBase
             {
                 return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {downloadClientId} not found");
             }
+
+            if (client.Type == Cleanuparr.Domain.Enums.DownloadClientType.Usenet)
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Torrent cleanup options are unavailable for Usenet clients");
 
             var existingRules = await SeedingRuleHelper.GetForClientAsync(_dataContext, client);
 
@@ -162,6 +168,9 @@ public class SeedingRulesController : ControllerBase
             {
                 return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {downloadClientId} not found");
             }
+
+            if (client.Type == Cleanuparr.Domain.Enums.DownloadClientType.Usenet)
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Torrent cleanup options are unavailable for Usenet clients");
 
             List<ISeedingRule> rules = await SeedingRuleHelper.GetForClientTrackedAsync(_dataContext, client);
 

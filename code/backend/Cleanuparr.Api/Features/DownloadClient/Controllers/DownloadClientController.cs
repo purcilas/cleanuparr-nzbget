@@ -6,6 +6,7 @@ using Cleanuparr.Api.Features.DownloadClient.Contracts.Requests;
 using Cleanuparr.Api.Features.DownloadClient.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
+using Cleanuparr.Infrastructure.Features.DownloadClient.Usenet;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
@@ -21,6 +22,7 @@ namespace Cleanuparr.Api.Features.DownloadClient.Controllers;
 [Authorize]
 public sealed class DownloadClientController : ControllerBase
 {
+    private readonly EventsContext? _events;
     private readonly ILogger<DownloadClientController> _logger;
     private readonly DataContext _dataContext;
     private readonly IDynamicHttpClientFactory _dynamicHttpClientFactory;
@@ -30,8 +32,10 @@ public sealed class DownloadClientController : ControllerBase
         ILogger<DownloadClientController> logger,
         DataContext dataContext,
         IDynamicHttpClientFactory dynamicHttpClientFactory,
-        IDownloadServiceFactory downloadServiceFactory)
+        IDownloadServiceFactory downloadServiceFactory,
+        EventsContext? events = null)
     {
+        _events = events;
         _logger = logger;
         _dataContext = dataContext;
         _dynamicHttpClientFactory = dynamicHttpClientFactory;
@@ -145,6 +149,50 @@ public sealed class DownloadClientController : ControllerBase
         }
     }
 
+    [HttpGet("download_client/{id}/usenet-status")]
+    public async Task<IActionResult> GetUsenetStatus(Guid id, CancellationToken cancellationToken)
+    {
+        if (!await _dataContext.DownloadClients.AnyAsync(x => x.Id == id && x.TypeName == DownloadClientTypeName.NZBGet, cancellationToken))
+            return NotFound();
+        if (_events is null) return StatusCode(503);
+        var rows = await _events.UsenetObservations.AsNoTracking().Where(x => x.ClientId == id)
+            .OrderByDescending(x => x.ActionState != "").ThenByDescending(x => x.LastSeenTicks).Take(200)
+            .Select(x => new { x.Id, x.OwnerId, x.LastSeenTicks, x.Samples, x.Incident, x.ActionState, x.Fingerprint }).ToListAsync(cancellationToken);
+        return Ok(rows.Select(x => new { x.Id, x.OwnerId, x.LastSeenTicks, x.Samples, x.Incident, x.ActionState,
+            Title = x.Id.EndsWith(":client", StringComparison.Ordinal) ? "Client recovery" : x.Fingerprint.Split('|')[0] }));
+    }
+
+    public sealed record RecoveryReviewRequest(bool AcknowledgeReview);
+
+    [HttpPost("download_client/{id}/usenet-review")]
+    public async Task<IActionResult> ReviewUsenetRecovery(Guid id, [FromBody] RecoveryReviewRequest request, CancellationToken cancellationToken)
+    {
+        if (!request.AcknowledgeReview) return BadRequest("Inspect NZBGet and the owning arr before acknowledging review");
+        if (_events is null) return StatusCode(503);
+        await UsenetQueueCoordinator.RecoveryLock.WaitAsync(cancellationToken);
+        try
+        {
+            var config = await _dataContext.DownloadClients.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
+            if (config?.TypeName != DownloadClientTypeName.NZBGet) return NotFound();
+            var state = await _events.UsenetObservations.FindAsync([id + ":client"], cancellationToken);
+            if (state?.ActionState != "Halted") return BadRequest("This client has no recovery hold to review");
+            using var service = _downloadServiceFactory.GetDownloadService(config);
+            if (service is not IUsenetDownloadService usenet) return BadRequest("Usenet inspection is unavailable");
+            UsenetSnapshot snapshot;
+            try { snapshot = await usenet.InspectAsync(cancellationToken); }
+            catch (Exception) { return BadRequest("Queue inspection failed; the recovery hold remains active"); }
+            if (!snapshot.Safe || !snapshot.TotalDownloadedBytes.HasValue) return BadRequest("Resolve client safety constraints before releasing the recovery hold");
+            state.ActionState = "AwaitingProgress";
+            state.ActionTicks = DateTimeOffset.UtcNow.UtcTicks;
+            state.LastSeenTicks = state.ActionTicks;
+            state.RecoveryProgress = snapshot.TotalDownloadedBytes.Value.ToString();
+            state.Incident = "Manual review acknowledged; waiting for renewed progress. Previous attempts remain protected.";
+            await _events.SaveChangesAsync(cancellationToken);
+            return Ok(new { Message = state.Incident });
+        }
+        finally { UsenetQueueCoordinator.RecoveryLock.Release(); }
+    }
+
     [HttpPost("download_client/test")]
     public async Task<IActionResult> TestDownloadClient([FromBody] TestDownloadClientRequest request)
     {
@@ -169,6 +217,7 @@ public sealed class DownloadClientController : ControllerBase
             }
 
             var testConfig = request.ToTestConfig(resolvedPassword);
+            testConfig.Validate();
             using var downloadService = _downloadServiceFactory.GetDownloadService(testConfig);
             var healthResult = await downloadService.HealthCheckAsync();
 

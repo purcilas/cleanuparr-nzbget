@@ -1,0 +1,36 @@
+name: Publish verified NZBGet image
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+concurrency:
+  group: publish-nzbget-image
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Download and verify the validated image archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh release download nzbget-2026.10.03 --repo "$REPOSITORY" --pattern cleanuparr-nzbget-unraid-image.tar.gz
+          echo "2d674474b56a6c705bf64a59c59b2fb0b049ba4ec511910164eb1a6654726e02  cleanuparr-nzbget-unraid-image.tar.gz" | sha256sum -c -
+          gzip -dc cleanuparr-nzbget-unraid-image.tar.gz | docker load
+      - name: Publish the validated Linux amd64 image
+        env:
+          REGISTRY_TOKEN: ${{ github.token }}
+          REGISTRY_USER: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io -u "$REGISTRY_USER" --password-stdin
+          docker tag localhost/cleanuparr-nzbget:2026-10-03 ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03
+          docker push ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03
+          docker image inspect ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03 --format '{{json .RepoDigests}}'
+      - name: Clear registry authentication
+        if: always()
+        run: docker logout ghcr.io

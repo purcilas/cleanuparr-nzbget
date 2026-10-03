@@ -1,4 +1,4 @@
-﻿using Cleanuparr.Domain.Entities.Arr.Queue;
+using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.ForceImport;
@@ -25,6 +25,7 @@ namespace Cleanuparr.Infrastructure.Features.Jobs;
 
 public sealed class QueueCleaner : GenericHandler
 {
+    private readonly Cleanuparr.Infrastructure.Features.DownloadClient.Usenet.UsenetQueueCoordinator? _usenet;
     private readonly IConnectivityChecker _connectivityChecker;
     private readonly ILazyLibrarianEvaluator _lazyLibrarianService;
 
@@ -40,13 +41,15 @@ public sealed class QueueCleaner : GenericHandler
         IDryRunInterceptor dryRunInterceptor,
         IConnectivityChecker connectivityChecker,
         IForceImportService forceImportService,
-        [FromKeyedServices(ILazyLibrarianEvaluator.QueueCleanerKey)] ILazyLibrarianEvaluator lazyLibrarianService
+        [FromKeyedServices(ILazyLibrarianEvaluator.QueueCleanerKey)] ILazyLibrarianEvaluator lazyLibrarianService,
+        Cleanuparr.Infrastructure.Features.DownloadClient.Usenet.UsenetQueueCoordinator? usenet = null
     ) : base(
         logger, dataContext, cache, messageBus,
         arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher, dryRunInterceptor,
         forceImportService
     )
     {
+        _usenet = usenet;
         _connectivityChecker = connectivityChecker;
         _lazyLibrarianService = lazyLibrarianService;
     }
@@ -59,6 +62,13 @@ public sealed class QueueCleaner : GenericHandler
         {
             _logger.LogWarning($"skip {nameof(QueueCleaner)} run | no internet connectivity detected");
             return;
+        }
+
+        if (_usenet is not null)
+        {
+            try { await _usenet.ProcessAsync(cancellationToken); }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+            catch (Exception ex) { _logger.LogWarning("Usenet ownership inspection suspended: {ExceptionType}", ex.GetType().Name); }
         }
 
         List<StallRule> stallRules = await _dataContext.StallRules
@@ -121,7 +131,7 @@ public sealed class QueueCleaner : GenericHandler
         ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, instance.Id);
         ContextProvider.Set(ContextProvider.Keys.Version, instance.Version);
 
-        IReadOnlyList<IDownloadService> downloadServices = await GetInitializedDownloadServicesAsync();
+        IReadOnlyList<IDownloadService> downloadServices = await GetInitializedDownloadServicesAsync(DownloadClientType.Torrent);
 
         if (instance.ArrConfig.Type is InstanceType.LazyLibrarian)
         {
@@ -185,6 +195,13 @@ public sealed class QueueCleaner : GenericHandler
                     continue;
                 }
                 
+                // Native Usenet is evaluated once across all owners with persisted safety/action state.
+                if (record.Protocol.Equals("usenet", StringComparison.OrdinalIgnoreCase)
+                    && ContextProvider.Get<List<DownloadClientConfig>>(nameof(DownloadClientConfig))
+                        .Any(x => x.Enabled && x.TypeName == DownloadClientTypeName.NZBGet
+                            && (string.IsNullOrWhiteSpace(record.DownloadClient) || string.Equals(x.Name, record.DownloadClient, StringComparison.OrdinalIgnoreCase))))
+                    continue;
+
                 // push record to context
                 ContextProvider.Set(nameof(QueueRecord), record);
 

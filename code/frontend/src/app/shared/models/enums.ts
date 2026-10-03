@@ -9,6 +9,7 @@ export enum DownloadClientTypeName {
   Transmission = 'Transmission',
   uTorrent = 'uTorrent',
   rTorrent = 'rTorrent',
+  NZBGet = 'NZBGet',
 }
 
 export enum NotificationProviderType {
@@ -185,4 +186,5 @@ export enum EventType {
   StrikeReset = 'StrikeReset',
   ForceImported = 'ForceImported',
   DownloadStopped = 'DownloadStopped',
+  UsenetIncident = 'UsenetIncident',
 }

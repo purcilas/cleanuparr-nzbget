@@ -126,7 +126,8 @@ public class DynamicHttpClientConfiguration : IConfigureNamedOptions<HttpClientF
             retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))
         );
 
-        builder.AdditionalHandlers.Add(new PolicyHttpMessageHandler(policy));
+        builder.AdditionalHandlers.Add(new PolicyHttpMessageHandler(request => request.Options.TryGetValue(new HttpRequestOptionsKey<bool>("Cleanuparr.NoMutationRetry"), out bool noRetry) && noRetry
+            ? Policy.NoOpAsync<HttpResponseMessage>() : policy));
     }
 
     internal static bool IsRetryable(HttpResponseMessage response, bool excludeUnauthorized)
