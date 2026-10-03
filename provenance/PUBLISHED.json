@@ -1,12 +1,18 @@
 {
   "repository": "https://github.com/purcilas/cleanuparr-nzbget",
-  "release": "https://github.com/purcilas/cleanuparr-nzbget/releases/tag/nzbget-2026.10.03",
-  "app_commit": "44a0b7730eb2a8e0273a01accb5853af390ced8f",
-  "image": "ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03",
-  "digest": "sha256:989967cc7af82f129fe609a2a500c917fa13e9587c4ba493f9116a47230e0c38",
-  "workflow_run": 37147465555,
+  "release": "https://github.com/purcilas/cleanuparr-nzbget/releases/tag/nzbget-2026.10.03.2",
+  "image": "ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03.2",
+  "digest": "sha256:bc8320a82d94514ef4f28ba47d7d5cee079487c286926ebf8a0497ac35987d2a",
+  "image_id": "3667ce0d90cc1189140d16690af333cf7dc1ff245f9dbd317b1a5b07264f85de",
+  "app_commit": "943019da9f681d43366357a4b7e28a486af84271",
+  "workflow_run": 37149749574,
   "anonymous_pull": "passed",
-  "anonymous_release_checksums": "passed",
-  "live_validation": "pending",
-  "unraid_deployment": "not performed"
+  "release_hashes": "passed",
+  "actual_api_real_nzbget_26_3": {
+    "before": 400,
+    "after": 200,
+    "wrong_password": "explicit HTTP401 diagnostic"
+  },
+  "live_homelab_validation": "pending",
+  "sabnzbd": "paused"
 }
