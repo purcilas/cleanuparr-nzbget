@@ -1,48 +1,64 @@
-# Install the custom NZBGet Cleanuparr build on Unraid
+# Install NZBGet-enabled Cleanuparr on Unraid
 
-This is a local Linux amd64 Docker image, not a published Community Applications entry. Image tag: `localhost/cleanuparr-nzbget:2026-10-03`. The image includes the tested application and UI plus upstream OS/Apprise dependencies; its base image is pinned in Dockerfile. Packaging and container startup were checked locally. No Unraid host has been accessed or changed.
+The custom Linux amd64 image is public and anonymous pull was verified:
 
-## Transfer first
-
-You need `cleanuparr-nzbget-unraid-image.tar.gz`, `cleanuparr-nzbget.xml` and the matching checksum file on your Unraid server. These have been prepared in the project but no public download or registry exists yet. Arrange direct file transfer or a separately approved release before proceeding. Do not install the standard Cleanuparr image expecting NZBGet support.
-
-## Load the image
-
-Place the delivered files in `/mnt/user/cleanuparr-nzbget-install/`, then open Unraid Terminal:
-
-```sh
-cd /mnt/user/cleanuparr-nzbget-install
-sha256sum -c UNRAID-SHA256SUMS
-gzip -dc cleanuparr-nzbget-unraid-image.tar.gz | docker load
-mkdir -p /boot/config/plugins/dockerMan/templates-user
-# Stop here if this template filename already exists; do not overwrite an existing setup.
-cp -n cleanuparr-nzbget.xml /boot/config/plugins/dockerMan/templates-user/my-cleanuparr-nzbget.xml
+```
+ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03
 ```
 
-## Add the container
+This is a validation prerelease of an independently maintained fork. No GitHub sign-in or registry token is required to pull it. It is not a Community Applications listing.
 
-On Docker → Add Container, select `cleanuparr-nzbget`. Confirm:
+## Install through the Unraid interface
+
+Open Docker → Add Container, leave Template unselected and enter:
 
 | Setting | Value |
 | --- | --- |
-| Repository | `localhost/cleanuparr-nzbget:2026-10-03` |
-| Network | `bridge` |
-| Host port → container port | `11012` → `11011` TCP |
-| Appdata → container path | `/mnt/user/appdata/cleanuparr-nzbget` → `/config`, read/write |
-| PUID / PGID | `99` / `100` |
-| TZ | Your local timezone; default `America/New_York` |
+| Name | `cleanuparr-nzbget` |
+| Repository | `ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03` |
+| Network Type | `bridge` |
 | Privileged | Off |
 
-Port 11012 and this appdata folder must be unused. The template is for a fresh separate install. Do not point it at another running Cleanuparr database. Do not enable automatic image updates: this tag exists locally only. Keep the image archive to reload if Unraid's Docker image storage is recreated.
+Use Add another Path, Port, Variable, Label or Device to add:
 
-Open `http://YOUR-UNRAID-IP:11012`, complete normal account setup, then add Sonarr/Radarr and NZBGet under settings. Use LAN IPs and each application's published host port on bridge networking; `localhost` refers to the Cleanuparr container. Docker container names require a shared user-defined network.
+| Type | Name | Container target | Host value | Mode |
+| --- | --- | --- | --- | --- |
+| Port | Web UI | `11011` | `11012` | TCP |
+| Path | Appdata | `/config` | `/mnt/user/appdata/cleanuparr-nzbget` | Read/Write |
+| Variable | PUID | `PUID` | `99` | |
+| Variable | PGID | `PGID` | `100` | |
+| Variable | Timezone | `TZ` | Your timezone, e.g. `America/New_York` | |
 
-Use the exact NZBGet download-client name already shown in Sonarr/Radarr. Test connections, enable Queue Cleaner, and leave **Live validation completed** and **Enable live Usenet recovery** off. Keep global dry-run on while validating. No media/download filesystem mount is required for API-only observation.
+Use an unused host port and a fresh appdata folder. Leave privileged mode off. No media/download path or Docker socket mount is needed for API-only monitoring. Click Apply/Create and wait for the image to download. Open `http://YOUR-UNRAID-IP:11012`.
 
-The software must first classify actual stalls correctly across several polls. Pure no-progress and repair/unpack stalls remain observation-only. Deployment does not establish live-cleanup acceptance.
+Complete the normal account setup. Add Sonarr/Radarr and NZBGet under settings. On bridge networking use each application's LAN address and published host port; `localhost` refers to this new container. Container names only resolve if services share an appropriate user-defined network.
 
-## Existing Cleanuparr and rollback
+Use the exact NZBGet download-client name already shown in Sonarr/Radarr. Test all connections, enable Queue Cleaner, keep global dry-run on and leave both **Live validation completed** and **Enable live Usenet recovery** off. API access goes into the application's authenticated settings, not a public post or this template.
 
-If you already have Cleanuparr, keep its production configuration separate during evaluation. Stop both applications before any later migration/copy of database files and back up the complete configuration first. Do not enable competing recovery in two applications. To undo this fresh install, stop the new container and retain its appdata for review; the old installation is unaffected by the separate paths.
+## Optional prefilled template
+
+The [release](https://github.com/purcilas/cleanuparr-nzbget/releases/tag/nzbget-2026.10.03) contains `cleanuparr-nzbget.xml`. To import it with Unraid Terminal:
+
+```sh
+# This intentionally stops if this template file already exists.
+set -eu
+template_path=/boot/config/plugins/dockerMan/templates-user/my-cleanuparr-nzbget.xml
+if [ -e "$template_path" ]; then
+  echo 'Template already exists; use the existing template or install manually.' >&2
+  exit 1
+fi
+mkdir -p /boot/config/plugins/dockerMan/templates-user
+curl -fL 'https://github.com/purcilas/cleanuparr-nzbget/releases/download/nzbget-2026.10.03/cleanuparr-nzbget.xml' -o "$template_path"
+```
+
+Then select `cleanuparr-nzbget` in Docker → Add Container and check all values before applying. Manual setup above needs no terminal commands.
+
+## Validation and updates
+
+This image passed container startup as UID99/GID100; it has not been installed or exercised against your homelab. Confirm pause/processing/progress classifications across several polls before enabling any recovery. Pure no-progress and repair/unpack stalls remain observation-only.
+
+Keep this pinned release out of automatic image-update jobs. A local Docker archive, full build inputs and checksums are available in the release as a fallback. The public source is at https://github.com/purcilas/cleanuparr-nzbget.
+
+If Cleanuparr is already installed, keep its production configuration separate during evaluation. Stop both applications before any later database migration/copy and back up the complete configuration first. Do not enable competing recovery in two applications or run two versions against the same databases. To undo this fresh install, stop the new container and retain its appdata for review.
 
 Reference: https://docs.unraid.net/unraid-os/using-unraid-to/run-docker-containers/managing-and-customizing-containers/

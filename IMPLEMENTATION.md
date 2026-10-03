@@ -1,6 +1,6 @@
 # Native NZBGet implementation handoff — 2026-10-03
 
-Native NZBGet support is implemented locally in Cleanuparr. The pinned working source is in `repo/`; an immutable upstream snapshot and build provenance are retained. No git commands, fork publication, deployment or live queue mutation were performed.
+Native NZBGet support is implemented locally in Cleanuparr. The pinned working source is in `repo/`; an immutable upstream snapshot and build provenance are retained. No git commands, deployment or live queue mutation were performed during local implementation. Subsequent authorized publication is recorded below.
 
 ## Delivered
 
@@ -56,3 +56,13 @@ Do not run two versions against the same databases. Back up configuration/events
 Read-only and dry-run validation against the actual NZBGet/Sonarr/Radarr installation needs hosting details, installed versions, securely supplied API access and representative stall responses. Compare intentional pauses, queued followers, repair/unpack and successful progress across several polls and a restart. Confirm client names and drone correlation before accepting any cleanup rule.
 
 Fork publication, deployment, enabling live recovery and destructive acceptance testing remain separately authorized release decisions. No live-cleanup validation is claimed.
+
+## Authorized publication — 2026-10-03
+
+Public fork: https://github.com/purcilas/cleanuparr-nzbget (default branch `nzbget`). Application commit `44a0b7730eb2a8e0273a01accb5853af390ced8f` matches all 58 locally validated application changes. Inherited upstream workflows are retained outside the active workflows directory. The only active workflow manually publishes the exact checksum-verified image archive.
+
+Validation release: https://github.com/purcilas/cleanuparr-nzbget/releases/tag/nzbget-2026.10.03. Anonymous downloads of image/source/template/checksums were hashed and match the local artifacts.
+
+Public image: `ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03`, digest `sha256:989967cc7af82f129fe609a2a500c917fa13e9587c4ba493f9116a47230e0c38`. GitHub Actions run 37147465555 succeeded; an anonymous pull matched the locally tested image ID. No additional registry credential was requested or stored.
+
+Unraid guide: `unraid/INSTALL.md`; fresh appdata and host port11012. Actual Unraid installation and homelab acceptance remain pending. Project still has no local git source control; publication used GitHub APIs. The original source archive is the retained local build-input snapshot, while current publication instructions are on the public branch.

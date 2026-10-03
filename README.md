@@ -4,7 +4,7 @@ An independently maintained, experimental fork of Cleanuparr. NZBGet configurati
 
 ## Install on Unraid
 
-Image: `ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03` (Linux amd64). A downloadable Docker archive is also available in the [release](https://github.com/purcilas/cleanuparr-nzbget/releases/tag/nzbget-2026.10.03). Registry visibility and anonymous-pull verification are tracked in the release notes.
+Image: `ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03` (Linux amd64). A downloadable Docker archive is also available in the [release](https://github.com/purcilas/cleanuparr-nzbget/releases/tag/nzbget-2026.10.03). The image is public; anonymous pull and public release download checksums were verified.
 
 Use Docker → Add Container with this image, bridge networking, host TCP port **11012** mapped to **11011**, `/mnt/user/appdata/cleanuparr-nzbget` mapped read/write to `/config`, `PUID=99`, `PGID=100`, and your timezone in `TZ`. Privileged mode is unnecessary. Use an unused host port and a fresh appdata directory. Open `http://YOUR-UNRAID-IP:11012`.
 

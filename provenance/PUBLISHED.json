@@ -1,0 +1,12 @@
+{
+  "repository": "https://github.com/purcilas/cleanuparr-nzbget",
+  "release": "https://github.com/purcilas/cleanuparr-nzbget/releases/tag/nzbget-2026.10.03",
+  "app_commit": "44a0b7730eb2a8e0273a01accb5853af390ced8f",
+  "image": "ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03",
+  "digest": "sha256:989967cc7af82f129fe609a2a500c917fa13e9587c4ba493f9116a47230e0c38",
+  "workflow_run": 37147465555,
+  "anonymous_pull": "passed",
+  "anonymous_release_checksums": "passed",
+  "live_validation": "pending",
+  "unraid_deployment": "not performed"
+}
