@@ -66,3 +66,19 @@ Validation release: https://github.com/purcilas/cleanuparr-nzbget/releases/tag/n
 Public image: `ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03`, digest `sha256:989967cc7af82f129fe609a2a500c917fa13e9587c4ba493f9116a47230e0c38`. GitHub Actions run 37147465555 succeeded; an anonymous pull matched the locally tested image ID. No additional registry credential was requested or stored.
 
 Unraid guide: `unraid/INSTALL.md`; fresh appdata and host port11012. Actual Unraid installation and homelab acceptance remain pending. Project still has no local git source control; publication used GitHub APIs. The original source archive is the retained local build-input snapshot, while current publication instructions are on the public branch.
+
+## NZBGet activation hotfix — 2026-10-03.1
+
+A real installation exposed ambiguous constructor selection when AddHttpClient and IDynamicHttpClientProvider were both registered. Direct adapter tests and synthetic frontend APIs had not exercised this production activation combination. The provider constructor now has ActivatorUtilitiesConstructor; both factory registration combinations are covered. The failing configuration reproduced the exact reported exception before the fix.
+
+Fresh infrastructure checks: 2,544 passed, 11 skipped (10 existing container-dependent tests plus the PostgreSQL test without a provisioned database); API584 passed. UI and migrations were unchanged and their earlier checks were not repeated. The freshly built Docker application's real POST /api/configuration/download_client/test returned HTTP200 against a synthetic local NZBGet server, including version/status/listgroups/history/log.
+
+Application commit e5d33a9bd50103d313f4750d6044d9d4861b16c5; release https://github.com/purcilas/cleanuparr-nzbget/releases/tag/nzbget-2026.10.03.1. Patch roundtrip and all58 published application blobs matched the validated local source. Image tag ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03.1; publication result retained under publication/. Keep existing appdata when updating; no schema change. Actual NZBGet validation remains pending.
+
+## NZBGet HTTP compatibility fix — 2026-10-03.2
+
+The generic connection failure was reproduced against a real isolated NZBGet26.3 container with correct credentials. The adapter used JsonContent, sending chunked requests; NZBGet requires a positive Content-Length before authentication. Buffered UTF-8 JSON now sends its exact length. Connection diagnostics distinguish the failing RPC operation and sanitized HTTP/network/JSON/RPC errors.
+
+Fresh infrastructure2,551/API584 tests passed; 11 infrastructure tests skipped as in the preceding hotfix (10 existing container-dependent checks and unprovisioned PostgreSQL). New regressions cover request length and safe status/method diagnostics. The actual packaged Cleanuparr connection-test endpoint changed from HTTP400 to HTTP200 against NZBGet26.3; intentionally wrong credentials now return an explicit HTTP401 diagnostic. Only isolated loopback fixtures were used; live homelab acceptance remains pending.
+
+NZBGet source reference33454e4eb828225b506d4c5d2c1af6f668c3682a; real test image ghcr.io/nzbgetcom/nzbget@sha256:82b098d174c15c3aae8ae737eb46c884e645e3f80f1d2217b5edd283680ead08. Artifacts provenance/transport-before.json, transport-after.json, transport-bad-password.json and nzbget-transport-checks.log. No database or UI changes. SABnzbd remains paused.

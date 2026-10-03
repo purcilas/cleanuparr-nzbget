@@ -60,7 +60,11 @@ public sealed class NzbGetServiceTests
             request.RequestUri!.AbsoluteUri.ShouldBe("https://example.test/proxy/nzbget/jsonrpc");
             request.Headers.Authorization!.Scheme.ShouldBe("Basic");
             Encoding.UTF8.GetString(Convert.FromBase64String(request.Headers.Authorization.Parameter!)).ShouldBe("test-user:test-password");
-            var body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(ct));
+            request.Content!.Headers.ContentLength.ShouldNotBeNull();
+            request.Headers.TransferEncodingChunked.ShouldNotBe(true);
+            var bytes = await request.Content.ReadAsByteArrayAsync(ct);
+            request.Content.Headers.ContentLength.ShouldBe(bytes.LongLength);
+            var body = JsonDocument.Parse(bytes);
             body.RootElement.GetProperty("method").GetString().ShouldBe("listgroups");
             body.RootElement.GetProperty("params")[0].GetInt32().ShouldBe(0);
             return new(HttpStatusCode.OK) { Content = new StringContent("{\"result\":[]}") };
@@ -97,6 +101,45 @@ public sealed class NzbGetServiceTests
         (await service.HealthCheckAsync()).IsHealthy.ShouldBeFalse();
         Should.Throw<NotSupportedException>(() => service.GetSeedingDownloads());
         service.Capabilities.ShouldBe(DownloadCapabilities.UsenetQueue);
+    }
+
+    [Theory]
+    [InlineData(401, "username/password rejected")]
+    [InlineData(403, "access denied")]
+    [InlineData(404, "endpoint not found")]
+    [InlineData(500, "server rejected")]
+    public async Task Connection_errors_identify_operation_and_status_without_exposing_response(int code, string reason)
+    {
+        using var http = new HttpClient(new Handler((_, _) => Task.FromResult(new HttpResponseMessage((HttpStatusCode)code)
+            { Content = new StringContent("test-password secret-response") })));
+        using var service = new NzbGetService(Config, http);
+        var result = await service.HealthCheckAsync();
+        result.IsHealthy.ShouldBeFalse();
+        result.ErrorMessage!.ShouldContain("NZBGet version");
+        result.ErrorMessage!.ShouldContain($"HTTP {code}");
+        result.ErrorMessage!.ShouldContain(reason);
+        result.ErrorMessage!.ShouldNotContain("test-password");
+        result.ErrorMessage!.ShouldNotContain("secret-response");
+    }
+
+    [Theory]
+    [InlineData("<html>test-password</html>", "not valid JSON")]
+    [InlineData("{\"error\":{\"code\":401,\"message\":\"test-password\"}}", "RPC rejected (code 401)")]
+    [InlineData("[]", "incomplete or unsupported")]
+    public async Task Queue_read_errors_identify_failing_method_without_exposing_body(string response, string reason)
+    {
+        using var http = new HttpClient(new Handler(async (request, ct) =>
+        {
+            using var body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(ct));
+            return new(HttpStatusCode.OK) { Content = new StringContent(body.RootElement.GetProperty("method").GetString() == "version"
+                ? "{\"result\":\"26.3\"}" : response) };
+        }));
+        using var service = new NzbGetService(Config, http);
+        var result = await service.HealthCheckAsync();
+        result.IsHealthy.ShouldBeFalse();
+        result.ErrorMessage!.ShouldContain("NZBGet status");
+        result.ErrorMessage!.ShouldContain(reason);
+        result.ErrorMessage!.ShouldNotContain("test-password");
     }
 
     [Theory]

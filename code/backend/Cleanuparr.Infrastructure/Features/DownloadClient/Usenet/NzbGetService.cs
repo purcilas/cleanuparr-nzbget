@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using Cleanuparr.Domain.Entities;
@@ -32,14 +31,50 @@ public sealed class NzbGetService : IDownloadService, IUsenetDownloadService
         _endpoint = new Uri(config.Url.ToString().TrimEnd('/') + "/jsonrpc");
     }
 
+    private sealed class NzbGetRpcException(string message) : InvalidOperationException(message);
+
     public async Task<JsonElement> CallAsync(string method, object[] parameters, CancellationToken cancellationToken = default)
+    {
+        // Only include known operation names and fixed diagnostics, never response bodies or exception text.
+        string operation = method is "version" or "status" or "listgroups" or "history" or "log" ? method : "RPC";
+        try { return await SendRpcAsync(method, parameters, operation, cancellationToken); }
+        catch (NzbGetRpcException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            string reason = ex.StatusCode switch
+            {
+                System.Net.HttpStatusCode.Unauthorized => "HTTP 401: username/password rejected; check NZBGet RPC credentials",
+                System.Net.HttpStatusCode.Forbidden => "HTTP 403: access denied; check account permissions or reverse-proxy access rules",
+                System.Net.HttpStatusCode.NotFound => "HTTP 404: endpoint not found; check Host and URL Base (do not include /jsonrpc)",
+                not null => $"HTTP {(int)ex.StatusCode.Value}: the server rejected the request",
+                _ => ex.HttpRequestError switch
+                {
+                    HttpRequestError.NameResolutionError => "hostname could not be resolved from Cleanuparr",
+                    HttpRequestError.SecureConnectionError => "TLS connection failed; check HTTPS and the server certificate",
+                    HttpRequestError.ConnectionError => "connection failed; check host, mapped port and container networking",
+                    _ => "HTTP transport failed; check host, port and proxy connectivity",
+                },
+            };
+            throw new NzbGetRpcException($"NZBGet {operation}: {reason}");
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        { throw new NzbGetRpcException($"NZBGet {operation}: request timed out; check network access and server responsiveness"); }
+        catch (JsonException)
+        { throw new NzbGetRpcException($"NZBGet {operation}: response was not valid JSON; check host, port and reverse proxy"); }
+        catch (InvalidOperationException)
+        { throw new NzbGetRpcException($"NZBGet {operation}: RPC response was incomplete or unsupported"); }
+    }
+
+    private async Task<JsonElement> SendRpcAsync(string method, object[] parameters, string operation, CancellationToken cancellationToken)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(30));
         using var request = new HttpRequestMessage(HttpMethod.Post, _endpoint);
         request.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(
             Encoding.UTF8.GetBytes($"{ClientConfig.Username}:{ClientConfig.Password}")));
-        request.Content = JsonContent.Create(new { method, @params = parameters, id = 1 });
+        // NZBGet requires Content-Length and rejects chunked request bodies before authentication.
+        request.Content = new ByteArrayContent(JsonSerializer.SerializeToUtf8Bytes(new { method, @params = parameters, id = 1 }));
+        request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
         using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
         if (!response.IsSuccessStatusCode)
             throw new HttpRequestException($"NZBGet RPC HTTP {(int)response.StatusCode}", null, response.StatusCode);
@@ -50,13 +85,17 @@ public sealed class NzbGetService : IDownloadService, IUsenetDownloadService
         int read;
         while ((read = await stream.ReadAsync(chunk, timeout.Token)) > 0)
         {
-            if (buffer.Length + read > 32 * 1024 * 1024) throw new InvalidOperationException("NZBGet response exceeds the safety limit");
+            if (buffer.Length + read > 32 * 1024 * 1024) throw new NzbGetRpcException($"NZBGet {operation}: response exceeds the 32 MiB safety limit");
             await buffer.WriteAsync(chunk.AsMemory(0, read), timeout.Token);
         }
         using var document = JsonDocument.Parse(buffer.ToArray());
         var root = document.RootElement;
         if (root.TryGetProperty("error", out var error) && error.ValueKind != JsonValueKind.Null)
-            throw new InvalidOperationException("NZBGet RPC returned an error");
+        {
+            string code = error.ValueKind == JsonValueKind.Object && error.TryGetProperty("code", out var value) && value.TryGetInt32(out int number)
+                ? $" (code {number})" : string.Empty;
+            throw new NzbGetRpcException($"NZBGet {operation}: RPC rejected{code}; check account permissions and NZBGet version");
+        }
         if (!root.TryGetProperty("result", out var result)) throw new InvalidOperationException("NZBGet RPC result is missing");
         return result.Clone();
     }
@@ -74,7 +113,7 @@ public sealed class NzbGetService : IDownloadService, IUsenetDownloadService
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            return new() { IsHealthy = false, ErrorMessage = "NZBGet connection or queue read failed; verify RPC access and URL base", ResponseTime = timer.Elapsed };
+            return new() { IsHealthy = false, ErrorMessage = ex is NzbGetRpcException ? ex.Message : "NZBGet queue/history inspection failed; the snapshot may be incomplete or incompatible. Check NZBGet version and retry", ResponseTime = timer.Elapsed };
         }
     }
 

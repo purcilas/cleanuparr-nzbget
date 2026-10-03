@@ -3,7 +3,7 @@
 The custom Linux amd64 image is public and anonymous pull was verified:
 
 ```
-ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03.1
+ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03.2
 ```
 
 This is a validation prerelease of an independently maintained fork. No GitHub sign-in or registry token is required to pull it. It is not a Community Applications listing.
@@ -15,7 +15,7 @@ Open Docker → Add Container, leave Template unselected and enter:
 | Setting | Value |
 | --- | --- |
 | Name | `cleanuparr-nzbget` |
-| Repository | `ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03.1` |
+| Repository | `ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03.2` |
 | Network Type | `bridge` |
 | Privileged | Off |
 
@@ -37,7 +37,7 @@ Use the exact NZBGet download-client name already shown in Sonarr/Radarr. Test a
 
 ## Optional prefilled template
 
-The [release](https://github.com/purcilas/cleanuparr-nzbget/releases/tag/nzbget-2026.10.03.1) contains `cleanuparr-nzbget.xml`. To import it with Unraid Terminal:
+The [release](https://github.com/purcilas/cleanuparr-nzbget/releases/tag/nzbget-2026.10.03.2) contains `cleanuparr-nzbget.xml`. To import it with Unraid Terminal:
 
 ```sh
 # This intentionally stops if this template file already exists.
@@ -48,7 +48,7 @@ if [ -e "$template_path" ]; then
   exit 1
 fi
 mkdir -p /boot/config/plugins/dockerMan/templates-user
-curl -fL 'https://github.com/purcilas/cleanuparr-nzbget/releases/download/nzbget-2026.10.03.1/cleanuparr-nzbget.xml' -o "$template_path"
+curl -fL 'https://github.com/purcilas/cleanuparr-nzbget/releases/download/nzbget-2026.10.03.2/cleanuparr-nzbget.xml' -o "$template_path"
 ```
 
 Then select `cleanuparr-nzbget` in Docker → Add Container and check all values before applying. Manual setup above needs no terminal commands.

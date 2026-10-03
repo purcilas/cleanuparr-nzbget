@@ -4,7 +4,7 @@ An independently maintained, experimental fork of Cleanuparr. NZBGet configurati
 
 ## Install on Unraid
 
-Image: `ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03.1` (Linux amd64). A downloadable Docker archive is also available in the [release](https://github.com/purcilas/cleanuparr-nzbget/releases/tag/nzbget-2026.10.03.1). The image is public; anonymous pull and public release download checksums were verified.
+Image: `ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03.2` (Linux amd64). A downloadable Docker archive is also available in the [release](https://github.com/purcilas/cleanuparr-nzbget/releases/tag/nzbget-2026.10.03.2). The image is public; anonymous pull and public release download checksums were verified.
 
 Use Docker → Add Container with this image, bridge networking, host TCP port **11012** mapped to **11011**, `/mnt/user/appdata/cleanuparr-nzbget` mapped read/write to `/config`, `PUID=99`, `PGID=100`, and your timezone in `TZ`. Privileged mode is unnecessary. Use an unused host port and a fresh appdata directory. Open `http://YOUR-UNRAID-IP:11012`.
 
@@ -29,3 +29,7 @@ License: GNU GPL v3; upstream attribution and LICENSE are retained.
 ## 2026-10-03.1 constructor fix
 
 The initial image could not test/create the NZBGet adapter when both HttpClient and the dynamic HTTP provider were registered. This patch explicitly marks the configured-provider constructor for dependency injection. The factory regression reproduces the original exception and now passes with both registrations. The packaged application's real connection-test API returns HTTP200 against a synthetic NZBGet RPC server. Fresh checks: infrastructure2,544 passed and API584 passed; 11 infrastructure skips (10 pre-existing Docker-dependent tests and the PostgreSQL test without a provisioned database). No migrations or UI behavior changed.
+
+## 2026-10-03.2 HTTP compatibility fix
+
+NZBGet requires fixed-length HTTP request bodies. The adapter now sends buffered JSON with Content-Length and returns sanitized operation-specific connection errors. The old image reproduced the reported failure against real NZBGet26.3; this image passed the actual application connection-test API with correct credentials and returned a clear HTTP401 diagnostic with incorrect credentials. Fresh infrastructure2,551/API584 tests passed, with11 infrastructure skips; see release notes.
