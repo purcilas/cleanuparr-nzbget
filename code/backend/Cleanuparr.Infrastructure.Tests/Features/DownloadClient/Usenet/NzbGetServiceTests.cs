@@ -3,6 +3,11 @@ using System.Text;
 using System.Text.Json;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient.Usenet;
+using Cleanuparr.Infrastructure.Features.DownloadClient;
+using Cleanuparr.Infrastructure.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
 using Cleanuparr.Persistence.Models.Configuration;
 using Shouldly;
 using Xunit;
@@ -17,6 +22,35 @@ public sealed class NzbGetServiceTests
     }
     public static DownloadClientConfig Config => new() { Name = "nzb", Type = DownloadClientType.Usenet, TypeName = DownloadClientTypeName.NZBGet,
         Host = new Uri("https://example.test"), Username = "test-user", Password = "test-password", UrlBase = "/proxy/nzbget/" };
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Factory_selects_configured_http_provider_for_connection_testing(bool registerDefaultHttpClient)
+    {
+        var methods = new List<string>();
+        using var http = new HttpClient(new Handler(async (request, ct) =>
+        {
+            using var body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(ct));
+            var method = body.RootElement.GetProperty("method").GetString()!;
+            methods.Add(method);
+            var result = method switch { "version" => "\"24.3\"", "status" => "{}", _ => "[]" };
+            return new(HttpStatusCode.OK) { Content = new StringContent("{\"result\":" + result + "}") };
+        }));
+        var provider = Substitute.For<IDynamicHttpClientProvider>();
+        var config = Config;
+        provider.CreateClient(config).Returns(http);
+        var registrations = new ServiceCollection().AddSingleton(provider);
+        if (registerDefaultHttpClient) registrations.AddHttpClient();
+        using var services = registrations.BuildServiceProvider();
+        var factory = new DownloadServiceFactory(NullLogger<DownloadServiceFactory>.Instance, services);
+        using var service = factory.GetDownloadService(config);
+
+        service.ShouldBeOfType<NzbGetService>();
+        (await service.HealthCheckAsync()).IsHealthy.ShouldBeTrue();
+        methods.ShouldBe(new[] { "version", "status", "listgroups", "history", "log" });
+        provider.Received(1).CreateClient(config);
+    }
 
     [Fact]
     public async Task Rpc_uses_basic_auth_positional_parameters_and_reverse_proxy_base()

@@ -18,9 +18,9 @@ jobs:
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
-          gh release download nzbget-2026.10.03 --repo "$REPOSITORY" --pattern cleanuparr-nzbget-unraid-image.tar.gz
-          echo "2d674474b56a6c705bf64a59c59b2fb0b049ba4ec511910164eb1a6654726e02  cleanuparr-nzbget-unraid-image.tar.gz" | sha256sum -c -
-          gzip -dc cleanuparr-nzbget-unraid-image.tar.gz | docker load
+          gh release download nzbget-2026.10.03.1 --repo "$REPOSITORY" --pattern cleanuparr-nzbget-hotfix-image.tar.gz
+          echo "2c5b755d58e4390e339d88e0dcd8e02577a44e822856dbfbfc378a024dcd0cfa  cleanuparr-nzbget-hotfix-image.tar.gz" | sha256sum -c -
+          gzip -dc cleanuparr-nzbget-hotfix-image.tar.gz | docker load
       - name: Publish the validated Linux amd64 image
         env:
           REGISTRY_TOKEN: ${{ github.token }}
@@ -28,9 +28,9 @@ jobs:
         run: |
           set -euo pipefail
           printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io -u "$REGISTRY_USER" --password-stdin
-          docker tag localhost/cleanuparr-nzbget:2026-10-03 ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03
-          docker push ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03
-          docker image inspect ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03 --format '{{json .RepoDigests}}'
+          docker tag localhost/cleanuparr-nzbget:2026-10-03.1 ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03.1
+          docker push ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03.1
+          docker image inspect ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03.1 --format '{{json .RepoDigests}}'
       - name: Clear registry authentication
         if: always()
         run: docker logout ghcr.io

@@ -6,6 +6,7 @@ using System.Text.Json;
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.HealthCheck;
 using Cleanuparr.Infrastructure.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 
@@ -19,6 +20,7 @@ public sealed class NzbGetService : IDownloadService, IUsenetDownloadService
     public DownloadClientConfig ClientConfig { get; }
     public DownloadCapabilities Capabilities => DownloadCapabilities.UsenetQueue;
 
+    [ActivatorUtilitiesConstructor]
     public NzbGetService(DownloadClientConfig config, IDynamicHttpClientProvider provider)
         : this(config, provider.CreateClient(config)) { }
 

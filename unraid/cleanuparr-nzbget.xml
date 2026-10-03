@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>cleanuparr-nzbget</Name>
-  <Repository>ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03</Repository>
+  <Repository>ghcr.io/purcilas/cleanuparr-nzbget:2026-10-03.1</Repository>
   <Network>bridge</Network>
   <Privileged>false</Privileged>
   <Overview>Local Cleanuparr build with native NZBGet support. Start in observation mode. No media mounts required for API-only monitoring.</Overview>
